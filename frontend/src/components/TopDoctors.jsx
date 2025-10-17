@@ -1,34 +1,106 @@
-import React, { useContext } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AppContext } from '../context/AppContext';
+import React, { useContext, useEffect } from "react";
+import { AppContext } from "../context/AppContext";
+import { Link } from "react-router-dom";
 
 const TopDoctors = () => {
-    const {doctors} = useContext(AppContext)
+  const { doctors, loading, error, getDoctorsData } = useContext(AppContext);
 
-    const navigate = useNavigate();
+  // 🧠 Automatically refresh doctors when updates occur (Admin or Doctor)
+  useEffect(() => {
+    const refreshDoctors = () => {
+      getDoctorsData();
+    };
+
+    // Listen for update events (Admin adds/deletes or Doctor updates)
+    window.addEventListener("doctorUpdated", refreshDoctors);
+    window.addEventListener("doctorListUpdated", refreshDoctors);
+    window.addEventListener("storage", (e) => {
+      if (e.key === "doctorUpdated" || e.key === "doctorListUpdated") {
+        refreshDoctors();
+      }
+    });
+
+    return () => {
+      window.removeEventListener("doctorUpdated", refreshDoctors);
+      window.removeEventListener("doctorListUpdated", refreshDoctors);
+    };
+  }, [getDoctorsData]);
+
+  if (loading) return <TopDoctorsSkeleton />;
+  if (error)
+    return (
+      <div className="p-10 text-center text-red-500">
+        Failed to load doctors: {error}
+      </div>
+    );
+
+  // ✅ Show only available doctors
+  const availableDoctors = doctors.filter((doc) => doc.available);
 
   return (
-    <div className='flex flex-col items-center gap-4 my-16 text-gray-900 md:mx-10'>
-      <h1 className='text-3xl font-medium'>Top Doctors to Book</h1>
-      <p className='sm:w-1/3 text-center text-sm'>Simply browse through our extensive list of trusted doctors. </p>
-      <div className='w-full grid grid-cols-auto gap-4 pt-5 gap-y-6 px-3 sm:px-0'>
-      {doctors.slice(0, 10).map((item, index)=>(
-          <div onClick={()=>{navigate(`/appointment/${item._id}`); window.scrollTo({top: 0})}} key={index} className='border border-blue-200 rounded-xl overflow-hidden cursor-pointer hover:translate-y-[-10px] transition-all duration-500'>
-            <img className='bg-blue-50' src={item.image} />
-            <div className='p-4'>
-            <div className='flex items-center gap-2 text-sm text-center text-green-500'>
-                <p className='w-2 h-2 bg-green-500 rounded-full'></p><p>Available</p>
-            </div>
-            <p className='text-gray-900 text-lg font-medium'>{item.name}</p>
-            <p className='text-gray-600 text-sm'>{item.speciality}</p>
-            </div>
-            </div>
-      ))}
-      
-      </div>
-      <button onClick={()=>{navigate('/doctors'); window.scrollTo({top: 0})}} className='bg-blue-50 text-gray-600 px-12 py-3 rounded-full mt-10'>More</button>
-    </div>
-  )
-}
+    <div className="p-10">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+        Available Doctors
+      </h2>
 
-export default TopDoctors
+      {availableDoctors.length === 0 ? (
+        <p className="text-gray-500 text-center">
+          No doctors available right now.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {availableDoctors.slice(0, 4).map((doc) => (
+            <Link
+              key={doc._id}
+              to={`/appointment/${doc._id}`}
+              className="block p-5 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              <img
+                src={doc.image}
+                alt={doc.name}
+                className="w-full h-44 object-cover rounded-lg mb-4"
+              />
+              <p className="font-semibold text-gray-900">{doc.name}</p>
+              <p className="text-sm text-gray-500">{doc.speciality}</p>
+
+              {/* ✅ Availability Tag */}
+              <p
+                className={`text-xs mt-2 font-medium ${
+                  doc.available ? "text-green-600" : "text-red-500"
+                }`}
+              >
+                {doc.available ? "Available" : "Unavailable"}
+              </p>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TopDoctors;
+
+/* --------------------------------------------
+   ✨ Skeleton Loader (Shown While Loading)
+--------------------------------------------- */
+const TopDoctorsSkeleton = () => {
+  return (
+    <div className="p-10">
+      <div className="h-7 w-40 bg-gray-200 rounded-md animate-pulse mb-6"></div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <div
+            key={i}
+            className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm"
+          >
+            <div className="w-full h-44 bg-gray-200 rounded-lg animate-pulse mb-4"></div>
+            <div className="h-4 w-3/4 bg-gray-200 rounded-md animate-pulse mb-2"></div>
+            <div className="h-3 w-1/2 bg-gray-200 rounded-md animate-pulse"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};

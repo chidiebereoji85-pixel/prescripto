@@ -11,13 +11,13 @@ const doctorSchema = new mongoose.Schema({
     about: {type: String, required: true},
     available: {type: Boolean, default: true},
     fees: {type: Number, required: true},
-    address: {type: Object, required: true},
-    date: {type: Number, required: true},
+    address: {line1: { type: String, required: false}, line2: { type: String}},
+    date: { type: Date, default: Date.now },
     slots_booked: {type: Object, default: {}}
 
 
 
-}, {minimize: false})
+}, { timestamps: true, minimize: false})
 
 const doctorModel = mongoose.models.doctor || mongoose.model('doctor', doctorSchema)
 

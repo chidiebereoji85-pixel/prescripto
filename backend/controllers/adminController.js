@@ -4,6 +4,8 @@ import {v2 as cloudinary} from 'cloudinary'
 import doctorModel from '../models/doctorModel.js';
 import jwt from 'jsonwebtoken';
 import fs from 'fs/promises';
+import appointmentModel from '../models/appointmentModel.js';
+import userModel from '../models/userModel.js';
 
 
 // API for adding doctor
@@ -47,6 +49,20 @@ const addDoctor = async (req, res) => {
             });
         }
 
+        // if (!name.includes('-')) {
+        //     return res.status(400).json({
+        //       success: false,
+        //       message: "Doctor name must include a unique identifier (e.g. 'Dr-001. John Doe')."
+        //     });
+        //   }
+
+        // if (!password.includes('-')) {
+        //     return res.status(400).json({
+        //       success: false,
+        //       message: "Password must include a unique identifier (e.g. doctor ID or '-' symbol)."
+        //     });
+        //   }
+          
         // 5. Handle image upload
         if (!imageFile) {
             return res.status(400).json({ success: false, message: "Doctor image is required." });
@@ -115,7 +131,7 @@ const loginAdmin = async (req, res) => {
                 },
                 process.env.JWT_SECRET,
                 {
-                    expiresIn: '1h', // Set token expiry
+                    expiresIn: '7d', // Set token expiry
                 }
             );
 
@@ -130,4 +146,77 @@ const loginAdmin = async (req, res) => {
     }
 };
 
-export {addDoctor, loginAdmin}
+// API to get all doctors list for admin panel
+const allDoctors = async (req, res) => {
+    try {
+        
+        const doctors = await doctorModel.find({}).select('-password')
+        res.json({success: true, doctors})
+    } catch (error) {
+        console.log(error);
+        res.json({success: false, message: error.message})
+    }
+};
+
+// API to get all appointments list
+const appointmentsAdmin = async (req, res) => {
+    try {
+      const appointments = await appointmentModel
+        .find({})
+        .populate("docId", "name specialty image fees") // doctor details
+        .populate("userId", "name email image age") // patient details
+        .sort({ createdAt: -1})    
+        
+      res.json({ success: true, appointments });
+    } catch (error) {
+      console.error("Error fetching admin appointments:", error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  };
+
+   const cancelAppointment = async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      const appointment = await appointmentModel.findById(id);
+      if (!appointment) return res.status(404).json({ success: false, message: "Appointment not found" });
+  
+      if (appointment.cancelled) return res.status(400).json({ success: false, message: "Already cancelled" });
+  
+      appointment.cancelled = true;
+      await appointment.save();
+  
+      res.json({ success: true, message: "Appointment cancelled successfully" });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  };
+  
+  // API to get dashboard data for Admin
+  const adminDashboard = async (req, res) => {
+
+    try {
+        
+        const doctors = await doctorModel.find({});
+        const users = await userModel.find({});
+        const appointments = await appointmentModel
+        .find({})
+        .populate("docId", "name specialty image fees") // doctor details
+        .populate("userId", "name email image age");    // patient details
+
+
+        const dashData = {
+            doctors: doctors.length,
+            appointments: appointments.length,
+            patients: users.length,
+            latestAppointments: appointments.reverse().slice(0, 5)
+        }
+
+        res.json({success: true, dashData});
+        
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  export {addDoctor, loginAdmin, allDoctors, appointmentsAdmin, cancelAppointment, adminDashboard}

@@ -1,31 +1,95 @@
-import React, { useState } from 'react';
-import { assets } from '../assets/assets_frontend/assets';
+import React, { useContext, useState } from "react";
+import { AppContext } from "../context/AppContext";
+import { assets } from "../assets/assets_frontend/assets";
+import axios from "axios";
+import { toast } from "react-toastify";
+import Avatar from "./Avatar";
 
 const MyProfile = () => {
-  const [userData, setUserData] = useState({
-    name: 'Edward Vincent',
-    image: assets.profile_pic,
-    email: 'richardjameswap@gmail.com',
-    phone: '+1 123 456 7890',
-    address: {
-      line1: '57th Cross, Richmond',
-      line2: 'Circle, Church Road, London',
-    },
-    gender: 'Male',
-    dob: '2000-01-20',
-  });
+  const { userData, setUserData, token, backendUrl, loadUserProfileData } =
+    useContext(AppContext);
 
   const [isEdit, setIsEdit] = useState(false);
+  const [image, setImage] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const updateUserProfileData = async () => {
+    if (isUpdating) return; // 🚫 Prevent multiple clicks
+    setIsUpdating(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("name", userData.name || "");
+      formData.append("phone", userData.phone || "");
+      formData.append("gender", userData.gender || "");
+      formData.append("dob", userData.dob || "");
+      formData.append("address", JSON.stringify(userData.address || {}));
+      if (image) formData.append("image", image);
+
+      const { data } = await axios.post(
+        `${backendUrl}/api/user/update-profile`,
+        formData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (data.success) {
+        toast.success("Profile updated!");
+        await loadUserProfileData();
+        setIsEdit(false);
+        setImage(false);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+      toast.error(err.response?.data?.message || err.message);
+    } finally {
+      setIsUpdating(false); // ✅ Unlock after request finishes
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+      {isEdit ? (
+        <label htmlFor="image" className="relative inline-block cursor-pointer">
+          {image || userData.image ? (
+            <Avatar
+              src={image ? URL.createObjectURL(image) : userData.image}
+              name={userData.name}
+              size="w-24 h-24"
+            />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-gray-300 flex items-center justify-center text-gray-400 text-sm">
+              No Image
+            </div>
+          )}
+
+          {/* Upload icon overlay */}
+          {!image && (
+            <img
+              src={assets.upload_icon}
+              alt="Upload"
+              className="absolute bottom-3 right-3 w-8 h-8 bg-white rounded-full p-1 shadow"
+            />
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            id="image"
+            hidden
+            onChange={(e) => setImage(e.target.files[0])}
+          />
+        </label>
+      ) : (
+        <div className="flex items-center gap-6">
+          <Avatar src={userData.image} name={userData.name} size="w-24 h-24" />
+        </div>
+      )}
+
       {/* Profile Header */}
       <div className="flex items-center gap-6">
-        <img
-          className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
-          src={userData.image}
-          alt="user"
-        />
         <div>
           {isEdit ? (
             <input
@@ -133,13 +197,20 @@ const MyProfile = () => {
             <input
               type="date"
               className="bg-gray-100 px-2 py-1 rounded w-full max-w-xs"
-              value={userData.dob}
+              value={
+                userData.dob
+                  ? new Date(userData.dob).toISOString().split("T")[0]
+                  : ""
+              }
               onChange={(e) =>
                 setUserData((prev) => ({ ...prev, dob: e.target.value }))
               }
             />
           ) : (
-            <span className="text-gray-600">{userData.dob}</span>
+            <span className="text-gray-600">
+              {" "}
+              {userData.dob ? new Date(userData.dob).toLocaleDateString() : ""}
+            </span>
           )}
         </div>
       </div>
@@ -149,7 +220,7 @@ const MyProfile = () => {
         {isEdit ? (
           <button
             className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800 transition"
-            onClick={() => setIsEdit(false)}
+            onClick={updateUserProfileData}
           >
             Save Information
           </button>

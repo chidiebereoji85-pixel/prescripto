@@ -1,6 +1,6 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../context/AppContext';
+import React, { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AppContext } from "../context/AppContext";
 
 const RelatedDoctors = ({ docId, speciality }) => {
   const navigate = useNavigate();
@@ -26,12 +26,16 @@ const RelatedDoctors = ({ docId, speciality }) => {
 
       {/* Wrapper to center grid on small doctor counts */}
       <div className="w-full flex justify-center">
-        <div className={`
+        <div
+          className={`
           grid gap-6 pt-5 gap-y-6 px-3 sm:px-0 
-          ${relatedDoctors.length >= 4
-            ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-            : 'grid-cols-1 sm:grid-cols-2'}
-        `}>
+          ${
+            relatedDoctors.length >= 4
+              ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+              : "grid-cols-1 sm:grid-cols-2"
+          }
+        `}
+        >
           {relatedDoctors.slice(0, 5).map((doctor) => (
             <div
               key={doctor._id}
@@ -43,8 +47,15 @@ const RelatedDoctors = ({ docId, speciality }) => {
             >
               <img
                 className="bg-blue-50 w-full h-48 object-cover object-center"
-                src={doctor.image}
-                alt={doctor.name}
+                src={
+                  doctor.image && doctor.image.trim() !== ""
+                    ? doctor.image
+                    : "/default-doctor.png"
+                }
+                alt={doctor.name || "Doctor"}
+                onError={(e) => {
+                  e.currentTarget.src = "/default-doctor.png";
+                }}
               />
 
               <div className="p-4 text-center">
@@ -53,7 +64,9 @@ const RelatedDoctors = ({ docId, speciality }) => {
                   <span>Available</span>
                 </div>
 
-                <p className="text-gray-900 text-lg font-medium">{doctor.name}</p>
+                <p className="text-gray-900 text-lg font-medium">
+                  {doctor.name}
+                </p>
                 <p className="text-gray-600 text-sm">{doctor.speciality}</p>
               </div>
             </div>
@@ -64,7 +77,7 @@ const RelatedDoctors = ({ docId, speciality }) => {
       {/* Centered Button */}
       <button
         onClick={() => {
-          navigate('/doctors');
+          navigate("/doctors");
           window.scrollTo({ top: 0 });
         }}
         className="bg-blue-50 text-gray-600 px-12 py-3 rounded-full mt-10 hover:bg-blue-100 transition self-center"
