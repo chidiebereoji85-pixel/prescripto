@@ -119,44 +119,32 @@ const addDoctor = async (req, res) => {
 };
 // API for admin login
 const loginAdmin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-    // ✅ Validate against demo admin credentials in environment variables
-    if (
-      email === process.env.DEMO_ADMIN_EMAIL &&
-      password === process.env.DEMO_ADMIN_PASSWORD
-    ) {
-      // Generate JWT token for the demo admin
-      const token = jwt.sign(
-        {
-          email,
-          role: "admin",
-        },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: "7d", // Token expires in 7 days
+        // Validate against env credentials
+        if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+            const token = jwt.sign(
+                {
+                    email,
+                    role: 'admin',
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: '7d', // Set token expiry
+                }
+            );
+
+            return res.json({ success: true, token });
         }
-      );
 
-      return res.json({
-        success: true,
-        token,
-        message: "Demo admin login successful",
-      });
+        res.status(401).json({ success: false, message: "Invalid email or password" });
+
+    } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
     }
-
-    // If credentials don't match, return unauthorized
-    res
-      .status(401)
-      .json({ success: false, message: "Invalid email or password" });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
 };
-
-export default loginAdmin;
 
 // API to get all doctors list for admin panel
 const allDoctors = async (req, res) => {
